@@ -7,18 +7,18 @@ from helpers import saveupdate
 # Choose variables
 player1 = "AI"
 player2 = "random_sampler"
-batch = 100
+batch = 1000
 replay_size = 100000
 sample_size = 256
 env = Tetris(player1, player2, batch)
 learn = False
 replay_buffer = replay_buffer(replay_size, sample_size, learn)
 learn_every = 1
-start_learning_after = 50000
+start_learning_after = 1000
 
 # Preprocess
 intersects = [True for _ in range(batch)]
-showPrint = False
+showPrint = True
 if env.player1 == "AI":
     Agent = Net(batch)
 def on_press(key):
@@ -32,7 +32,7 @@ keyboard.Listener(on_press=on_press).start()
 # Gameloop
 for counter in range(10**10):
     actions = Agent.take_action(env)
-    obsBoard, obsPieces, intersects, rewards, dones = env.step(actions)
+    obsBoard, obsPieces, intersects, rewards, dones = env.step(actions, intersects)
     replay_buffer.save_data([Agent.fields, Agent.pieces, obsBoard, obsPieces, Agent.actions, rewards, dones], intersects)
     fields, pieces, fields2, pieces2, actions, rewards, dones = replay_buffer.sample_data()
     Agent.DoubleQlearn(fields, pieces, fields2, pieces2, actions, rewards, dones, learn)

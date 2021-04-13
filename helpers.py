@@ -17,4 +17,4 @@ def saveupdate(counter, Agent, showPrint, env):
     if showPrint:
         plt.close('all')
         returnplot(env.score_list, x=1200, y=200)
-        showPrint = False
+        showPrint = True

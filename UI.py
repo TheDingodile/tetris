@@ -12,7 +12,7 @@ class UI():
         pygame.display.set_caption("Tetris")
         self.clock = pygame.time.Clock()
 
-    def draw_step(self, game):    
+    def draw_step(self, game):  
         # Define some colors
         BLACK = (0, 0, 0)
         WHITE = (255, 255, 255)
