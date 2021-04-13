@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from game import Tetris
-import numpy as np
-from torch.optim import Adam, SGD
+from torch.optim import Adam
 from exploration import Exploration
 import pickle
 from helpers import device
@@ -29,9 +27,9 @@ class Net:
         pieces = env.AInext_pieces
         vals = self.network(field[intersects], pieces[intersects])
         action = self.explorer.greedy(vals)
-        self.fields[intersects] = field[intersects]
-        self.pieces[intersects] = pieces[intersects]
-        self.actions[intersects] = action[intersects]
+        self.fields[intersects == True] = field[intersects == True]
+        self.pieces[intersects == True] = pieces[intersects == True]
+        self.actions[intersects == True] = action[intersects == True]
         return action
 
     def DoubleQlearn(self, pre_AIfield, pre_AIpieces, AIfield, AIpieces, pre_action, last_reward, dones, learn):
@@ -55,7 +53,7 @@ class Network(nn.Module):
     def __init__(self, vis_pieces=1):
         super(Network, self).__init__()
         self.size_after_con = 3520
-        self.conv = nn.Sequential(nn.Conv2d(1, 128, 5), nn.LeakyReLU(), nn.Conv2d(128, 32, 1), nn.LeakyReLU())
+        self.conv = nn.Sequential(nn.Conv2d(1, 128, 5), nn.LeakyReLU(), nn.Conv2d(128, 32, 1), nn.LeakyReLU(), nn.Flatten())
         self.linear = nn.Sequential(nn.Linear(self.size_after_con + 7 * (1 + vis_pieces), 40), nn.LeakyReLU(), nn.Linear(40, 100), nn.LeakyReLU(), nn.Linear(100, 44))
 
     def forward(self, field, pieces):
@@ -63,8 +61,7 @@ class Network(nn.Module):
         padder = torch.ones(field.shape[0], 1, field.shape[2], 2, device=device)
         field_pad = torch.cat((padder, torch.cat((field, padder), 3)), 3)
         x = self.conv(field_pad)
-        x = x.view(-1, 1, self.size_after_con)
-        x = torch.cat((x, pieces.view(x.shape[0], 1, -1).to(device)), 2)
+        x = torch.cat((x, pieces), 1)
         x = self.linear(x)
         return x
 

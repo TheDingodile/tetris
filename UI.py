@@ -27,21 +27,21 @@ class UI():
         for i in range(game.height):
             for j in range(game.width):
                 pygame.draw.rect(self.screen, GRAY, [game.x + game.zoom * j, game.y + game.zoom * i, game.zoom, game.zoom], 1)
-                if game.field[i][j] != 0:
+                if game.field[0,0,i,j] != 0:
                     pygame.draw.rect(self.screen, (120,120,120),
                                     [game.x + game.zoom * j + 1, game.y + game.zoom * i + 1, game.zoom - 2, game.zoom - 1])
 
-        if game.figure is not None:
+        if game.figure[0] is not None:
             for i in range(4):
                 for j in range(4):
                     p = i * 4 + j
-                    if p in game.figure.image():
-                        pygame.draw.rect(self.screen, game.figure.color,
-                                        [game.x + game.zoom * (j + game.figure.x) + 1,
-                                        game.y + game.zoom * (i + game.figure.y) + 1,
+                    if p in game.figure[0].image():
+                        pygame.draw.rect(self.screen, game.figure[0].color,
+                                        [game.x + game.zoom * (j + game.figure[0].x) + 1,
+                                        game.y + game.zoom * (i + game.figure[0].y) + 1,
                                         game.zoom - 2, game.zoom - 2])
-        for k in range(len(game.next_pieces)):
-            the_figure = game.next_pieces[k]
+        for k in range(len(game.next_pieces[0])):
+            the_figure = game.next_pieces[0][k]
             for i in range(4):
                 for j in range(4):
                     p = i * 4 + j
@@ -66,7 +66,7 @@ class UI():
         self.screen.blit(text3, [600, 600])
         self.screen.blit(text4, [0, 600])
 
-        if game.DONE is True:
+        if True is False:
             self.screen.blit(text_game_over, [20, 200])
             self.screen.blit(text_game_over1, [25, 265])
 

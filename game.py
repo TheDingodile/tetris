@@ -57,24 +57,19 @@ class Tetris:
         self.seven_bag_counter = 0
         self.seven_bag = None
         self.next_pieces = [[] for _ in range(batch)]
-        self.AInext_pieces = torch.zeros(batch, 7, device=device)
+        self.AInext_pieces = torch.zeros(batch, 7 * (1 + self.visible_pieces), device=device)
         self.action = 5
         self.last_reward = 0
         self.field = torch.zeros(self.batch, 1, self.height, self.width, device=device)
 
         for j in range(batch):
             for _ in range(self.visible_pieces):
-                self.add_figure(j)
-            self.add_figure(j)
+                self.draw_figure(j)
             self.draw_figure(j)
         self.score_list = []
         self.intersected = [True for _ in range(batch)]
 
     def draw_figure(self, batch):
-        self.figure[batch] = self.next_pieces[batch][0]
-        self.next_pieces[batch] = self.next_pieces[batch][1:]
-
-    def add_figure(self, batch):
         if self.piece_sampler == "random_sampler":
             piece = self.randomsample()
         elif self.piece_sampler == "seven_bag":
@@ -83,7 +78,10 @@ class Tetris:
         self.next_pieces[batch].append(Figure(figure, color, piece))
         onehot = torch.zeros(7, device=device)
         onehot[piece] = 1
-        self.AInext_pieces[batch, -1] = onehot[piece]
+        for i in range(self.visible_pieces):
+            self.AInext_pieces[batch, i] = self.AInext_pieces[batch, i + 1]
+        self.figure[batch] = self.next_pieces[batch][0]
+        self.next_pieces[batch] = self.next_pieces[batch][1:]
 
     def randomsample(self):
         return random.randint(0, len(self.all_figures) - 1)
@@ -98,15 +96,17 @@ class Tetris:
 
     def intersects(self, batch):
         intersection = False
-        for i in range(4):
-            for j in range(4):
-                if i * 4 + j in self.figure[batch].image():
-                    if i + self.figure[batch].y > self.height - 1 or \
-                            j + self.figure[batch].x > self.width - 1 or \
-                            j + self.figure[batch].x < 0 or \
-                            self.field[i + self.figure[batch].y, j + self.figure[batch].x] != 0:
-                        intersection = True
+        for item in self.figure[batch].image():
+            i = item % 4
+            j = item - i * 4
+            if i + self.figure[batch].y > self.height - 1 or \
+                    j + self.figure[batch].x > self.width - 1 or \
+                    j + self.figure[batch].x < 0 or \
+                    self.field[batch, 0, i + self.figure[batch].y, j + self.figure[batch].x] != 0:
+                intersection = True
         return intersection
+
+
 
     def break_lines(self):
         maxer = [0] * 10
@@ -164,7 +164,6 @@ class Tetris:
         broke = self.break_lines()
         self.last_reward += 20 * broke * side_clear/(8 + self.mean_score_list[-1])
 
-        self.add_figure()
         self.intersected = True
         self.draw_figure()
         if self.intersects():
@@ -179,13 +178,13 @@ class Tetris:
     def go_side(self, dx, batch):
         old_x = self.figure[batch].x
         self.figure[batch].x += dx
-        if self.intersects():
+        if self.intersects(batch):
             self.figure[batch].x = old_x
 
     def rotate_clock(self, amount, batch):
         old_rotation = self.figure[batch].rotation
         self.figure[batch].rotate_clock(amount)
-        if self.intersects():
+        if self.intersects(batch):
             self.figure[batch].rotation = old_rotation
 
     def level_up(self):
@@ -197,8 +196,8 @@ class Tetris:
             j = 0
             if self.intersected[i] == True:
                 rotate = action[j]//11
-                self.rotate_clock(rotate)
-                self.go_side(action[j] * 11 - rotate)   
+                self.rotate_clock(rotate, j)
+                self.go_side(action[j] * 11 - rotate, j)   
                 j += 1
         
         if self.Use_UI is True:
@@ -224,9 +223,8 @@ class Tetris:
         self.last_reward = 0
 
         self.field = torch.zeros(self.height, self.width, device=device)
-            
-        for i in range(self.visible_pieces):
-            self.add_figure()
-        self.add_figure()
-        self.draw_figure()
+        for j in range(self.batch):
+            for _ in range(self.visible_pieces):
+                self.draw_figure(j)
+            self.draw_figure(j)
 
