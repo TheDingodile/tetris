@@ -57,16 +57,16 @@ class Tetris:
         self.seven_bag_counter = 0
         self.seven_bag = None
         self.next_pieces = [[] for _ in range(batch)]
-        self.AInext_pieces = torch.zeros(batch, 7 * (1 + self.visible_pieces), device=device)
+        self.AInext_pieces = torch.zeros(batch, 7 * (1 + self.visible_pieces), device=device).long()
         self.action = 5
-        self.field = torch.zeros(self.batch, 1, self.height, self.width, device=device)
+        self.field = torch.zeros(self.batch, 1, self.height, self.width, device=device).long()
 
         for j in range(batch):
             for _ in range(self.visible_pieces):
                 self.draw_figure(j)
             self.draw_figure(j)
         self.score_list = []
-        self.intersected = [True for _ in range(batch)]
+        self.intersected = torch.ones(self.batch, device=device).long()
 
     def draw_figure(self, batch):
         if self.piece_sampler == "random_sampler":
@@ -141,7 +141,7 @@ class Tetris:
         self.figure[batch].y += 1
         if self.intersects(batch):
             self.figure[batch].y -= 1
-            self.intersected[batch] = True
+            self.intersected[batch] = 1
 
     def freeze(self):
         rewards = torch.zeros(self.batch, device=device)
@@ -154,7 +154,6 @@ class Tetris:
                     self.field[k, 0, i + self.figure[i].y, j + self.figure[i].x] = 1
                     self.draw_figure(k)
                     rewards[k] = self.break_lines(k)
-                    print("why")
                     dones[k] = self.game_over(k)
 
         return rewards, dones
@@ -188,7 +187,7 @@ class Tetris:
             self.level += 1
 
     def step(self, action, intersects):
-        self.intersected = [False for _ in range(self.batch)]
+        self.intersected = torch.zeros(self.batch, device=device)
         j = 0
         for i in range(self.batch):
             if intersects[i] == 1:

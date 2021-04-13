@@ -27,7 +27,7 @@ class Exploration():
         self.counter += 1
         # if self.counter % 1000 == 1:
         #    print(f"({str(float(vals.max()))[:4]}, {str(float(vals.std()))[:4]})", end=", ")
-        return torch.argmax(vals, dim=1)
+        return torch.argmax(vals, dim=1).long()
 
     def epsilonGreedy(self, vals):
         self.counter += 1

@@ -15,6 +15,6 @@ def saveupdate(counter, Agent, showPrint, env):
         Agent.update_target_network()
         saveAgent(Agent, "yo")
     if showPrint:
+        showPrint = False
         plt.close('all')
         returnplot(env.score_list, x=1200, y=200)
-        showPrint = True

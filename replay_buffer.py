@@ -1,6 +1,7 @@
 import random
 from torch import as_tensor as tensor, cat as concatenation, device as devicer, cuda, float32
 from helpers import device
+import torch
 
 class replay_buffer:
     def __init__(self, size, sample_size, learn):
@@ -11,10 +12,13 @@ class replay_buffer:
         self.learn = learn
 
     def save_data(self, data, intersects):
-        for i in range(len(data)):
-            data[i] = data[intersects]
-        self.buffer[self.counter % self.replay_size] = data
-        self.counter += 1
+        intersects = torch.nonzero(intersects).flatten().long()
+        for j in intersects:
+            good_data = []
+            for dat in data:
+                good_data.append(dat[j])
+            self.buffer[self.counter % self.replay_size] = good_data
+            self.counter += 1
 
     def stacker(self, sample):
         if self.learn and self.buffer[0] != None:
@@ -22,10 +26,12 @@ class replay_buffer:
             return tensor(arays[0]).unsqueeze(1).float().to(device), tensor(arays[1]).float().to(device), tensor(arays[2]).unsqueeze(1).float().to(device), tensor(arays[3]).float().to(device), tensor(arays[4]).float().to(device), tensor(arays[5]).float().to(device), tensor(arays[6]).to(device)
         else:
             return None, None, None, None, None, None, None
-
+            
     def sample_data(self):
-        if self.learn:
+        if self.learn and self.counter > self.replay_size:
             samples = (random.sample(self.buffer[:min(self.counter, self.replay_size)], min(self.sample_size, self.counter)))
             return self.stacker(samples)
+        else:
+            return None, None, None, None, None, None, None
 
 

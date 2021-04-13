@@ -8,7 +8,9 @@ from helpers import device
 
 
 class Net:
-    def __init__(self, batch):
+    def __init__(self, batch, height, width):
+        self.height = height
+        self.width = width
         self.batch = batch
         self.network = Network().to(device)
         self.target_network = Network().to(device)
@@ -17,19 +19,21 @@ class Net:
         self.criterion = nn.MSELoss()
         self.optimizer = Adam(self.network.parameters(), lr=1e-4, weight_decay=1e-5)
         self.explorer = Exploration()
-        self.fields = [None for _ in range(batch)]
-        self.pieces = [None for _ in range(batch)]
-        self.actions = [None for _ in range(batch)]
+        self.fields = torch.zeros(self.batch, 1, self.height, self.width, device=device).long()
+        self.pieces = torch.zeros(self.batch, 14, device=device).long()
+        self.actions = torch.zeros(self.batch, device=device).long()
 
     def take_action(self, env):
-        intersects = env.intersected
+        intersects = torch.nonzero(env.intersected).flatten().long()
         field = env.field
         pieces = env.AInext_pieces
         vals = self.network(field[intersects], pieces[intersects])
         action = self.explorer.greedy(vals)
-        self.fields[intersects == True] = field[intersects == True]
-        self.pieces[intersects == True] = pieces[intersects == True]
-        self.actions[intersects == True] = action[intersects == True]
+        for i in range(len(intersects)):
+            inter = intersects[i]
+            self.fields[inter] = field[i]
+            self.pieces[inter] = pieces[i]
+            self.actions[inter] = action[i]
         return action
 
     def DoubleQlearn(self, pre_AIfield, pre_AIpieces, AIfield, AIpieces, pre_action, last_reward, dones, learn):
