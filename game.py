@@ -60,6 +60,7 @@ class Tetris:
         self.AInext_pieces = torch.zeros(batch, 7 * (1 + self.visible_pieces), device=device).long()
         self.action = 5
         self.field = torch.zeros(self.batch, 1, self.height, self.width, device=device).long()
+        self.max_field = [[0 for _ in range(self.width)] for _ in range(self.batch)]
 
         for j in range(batch):
             for _ in range(self.visible_pieces):
@@ -94,23 +95,31 @@ class Tetris:
         return self.seven_bag[self.seven_bag_counter - 1]
 
     def intersects(self, batch):
-        intersection = False
         for item in self.figure[batch].image():
-            i = item % 4
+            i = item // 4
             j = item - i * 4
-            if i + self.figure[batch].y > self.height - 1 or \
-                    j + self.figure[batch].x > self.width - 1 or \
-                    j + self.figure[batch].x < 0 or \
-                    self.field[batch, 0, i + self.figure[batch].y, j + self.figure[batch].x] != 0:
-                intersection = True
-        return intersection
+            height = i + self.figure[batch].y
+            width = j + self.figure[batch].x
+            if height > self.height - 1 or width > self.width - 1 or width < 0 or self.field[batch, 0, height, width] != 0:
+                return True
+        return False
 
+    def break_lines2(self, int_idx):
+        summed_field = torch.sum(self.field[int_idx], dim=3)
+        summed_field[summed_field != 10] = 0
+        breaks = torch.nonzero(summed_field)
+        for i in range(breaks.shape[0]):
+            batch = breaks[i, 0]
+            line = breaks[i, 2]
+            roof = torch.cat((self.field[batch, 0, :(line - 1), :], torch.zeros(1, self.field.shape[3], device=device)), 0)
+            self.field[batch, 0, :line, :] = roof
+            self.max_field[i] = [x - 1 for x in self.max_field[i]]
+        return 1
 
 
     def break_lines(self, batch):
         maxer = [0] * 10
         lines = 0
-        broke = 0
         for i in range(1, self.height):
             zeros = 0
             for j in range(self.width):
@@ -119,7 +128,6 @@ class Tetris:
                 elif maxer[j] == 0:
                     maxer[j] = self.height - i
             if zeros == 0:
-                broke = 1
                 lines += 1
                 for i1 in range(i, 1, -1):
                     for j in range(self.width):
@@ -133,9 +141,21 @@ class Tetris:
         return reward
 
     def go_space(self, batch):
-        while not self.intersects():
-            self.figure[batch].y += 1
+        min_delta = self.height
+        for item in self.figure[batch].image():
+            i = item // 4
+            j = item - i * 4
+            height = i + self.figure[batch].y
+            width = j + self.figure[batch].x
+            delta = (self.height - height) - self.max_field[batch][width]
+            if delta < min_delta:
+                min_delta = delta
+        self.figure[batch].y += min_delta
         self.figure[batch].y -= 1
+        self.intersected[batch] = 1
+
+        return False
+
 
     def go_down(self, batch):
         self.figure[batch].y += 1
@@ -143,25 +163,27 @@ class Tetris:
             self.figure[batch].y -= 1
             self.intersected[batch] = 1
 
-    def freeze(self):
+    def freeze(self, int_idx):
         rewards = torch.zeros(self.batch, device=device)
         dones = torch.zeros(self.batch, device=device)
-        for k in range(self.batch):
-            if self.intersected[k] == 1:
-                for item in self.figure[k].image():
-                    i = item % 4
-                    j = item - i * 4
-                    self.field[k, 0, i + self.figure[i].y, j + self.figure[i].x] = 1
-                    self.draw_figure(k)
-                    rewards[k] = self.break_lines(k)
-                    dones[k] = self.game_over(k)
-
+        for k in int_idx:
+            for item in self.figure[k].image():
+                i = item // 4
+                j = item - i * 4 
+                height = i + self.figure[k].y
+                width = j + self.figure[k].x
+                self.field[k, 0, height, width] = 1
+                if self.height - height > self.max_field[k][width]:
+                    self.max_field[k][width] = self.height - height
+            self.draw_figure(k)
+            dones[k] = self.game_over(k)
         return rewards, dones
 
     def game_over(self, batch):
         done = False
         if self.intersects(batch):
             done = True
+            self.restart(batch)
             print("gameover //", "score: " + str(self.score) + " //", "lines: " + str(self.all_lines))
             self.score_list.append(self.score)
             if len(self.mean_score_list) == 1 and len(self.score_list) > 1000:
@@ -187,42 +209,40 @@ class Tetris:
             self.level += 1
 
     def step(self, action, intersects):
-        self.intersected = torch.zeros(self.batch, device=device)
-        j = 0
-        for i in range(self.batch):
-            if intersects[i] == 1:
-                rotate = action[j]//11
-                self.rotate_clock(rotate, i)
-                self.go_side(action[j] * 11 - rotate, i)
-                j += 1
-            self.go_down(i)
+        if action != None:
+            for inter, act in zip(torch.nonzero(intersects).flatten().long(), action):
+                rotate = act//11
+                self.rotate_clock(rotate, inter)
+                self.go_side((act - 11 * rotate) - 5, inter)
 
-        rewards, dones = self.freeze()
+        self.intersected = torch.zeros(self.batch, device=device)
+        for i in range(self.batch):
+            self.go_space(i)
+
+        intersects_idx = torch.nonzero(self.intersected).flatten().long()
+        rewards, dones = self.freeze(intersects_idx)
+        self.break_lines2(intersects_idx)
+
         if self.Use_UI is True:
             if self.high_performance == 1:
                 self.UI.action(self)
             else:
                 self.UI.draw_step(self)
                 self.UI.clock.tick(self.fps)
-        return self.field, self.next_pieces, self.intersected, rewards, dones
+        return self.field, self.AInext_pieces, self.intersected, rewards, dones
 
-    def restart(self):
+    def restart(self, batch):
+        self.figure[batch] = None
         self.score = 0
-        self.done = False
-        self.figure = [None for _ in range(self.batch)]
         self.all_lines = 0
         self.all_tetrises = 0
         self.level = self.start_level
-
         self.seven_bag_counter = 0
-        self.seven_bag = None
-        self.next_pieces = []
-        self.AInext_pieces = torch.zeros(self.batch, 7, device=device)
-        self.action = 5
+        self.next_pieces[batch] = []
+        self.AInext_pieces[batch] = torch.zeros(7 * (1 + self.visible_pieces), device=device).long()
+        self.field[batch] = torch.zeros(1, self.height, self.width, device=device).long()
 
-        self.field = torch.zeros(self.height, self.width, device=device)
-        for j in range(self.batch):
-            for _ in range(self.visible_pieces):
-                self.draw_figure(j)
-            self.draw_figure(j)
-
+        for _ in range(self.visible_pieces):
+            self.draw_figure(batch)
+        self.draw_figure(batch)
+        self.max_field[batch] = [0 for _ in range(self.width)]

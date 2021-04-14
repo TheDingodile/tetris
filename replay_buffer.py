@@ -11,27 +11,21 @@ class replay_buffer:
         self.sample_size = sample_size
         self.learn = learn
 
-    def save_data(self, data, intersects):
-        intersects = torch.nonzero(intersects).flatten().long()
-        for j in intersects:
-            good_data = []
-            for dat in data:
-                good_data.append(dat[j])
-            self.buffer[self.counter % self.replay_size] = good_data
-            self.counter += 1
-
     def stacker(self, sample):
-        if self.learn and self.buffer[0] != None:
-            arays = list(zip(*sample))
-            return tensor(arays[0]).unsqueeze(1).float().to(device), tensor(arays[1]).float().to(device), tensor(arays[2]).unsqueeze(1).float().to(device), tensor(arays[3]).float().to(device), tensor(arays[4]).float().to(device), tensor(arays[5]).float().to(device), tensor(arays[6]).to(device)
-        else:
-            return None, None, None, None, None, None, None
+        arays = list(zip(*sample))
+        return concatenation(arays[0], 0).squeeze(1), concatenation(arays[1], 0).squeeze(1), concatenation(arays[2], 0).squeeze(1), concatenation(arays[3], 0).squeeze(1), concatenation(arays[4], 0).squeeze(1), concatenation(arays[5], 0).squeeze(1), concatenation(arays[6], 0).squeeze(1)
             
     def sample_data(self):
-        if self.learn and self.counter > self.replay_size:
+        if self.learn:
             samples = (random.sample(self.buffer[:min(self.counter, self.replay_size)], min(self.sample_size, self.counter)))
+            if samples == []:
+                return None, None, None, None, None
             return self.stacker(samples)
-        else:
-            return None, None, None, None, None, None, None
 
+    def save_data(self, fields, pieces, obsBoard, obsPieces, actions, rewards, dones, intersects):
+        ints = torch.nonzero(intersects)
+        for idx in ints:
+            data = (torch.clone(fields[idx]).unsqueeze(0), torch.clone(pieces[idx]).unsqueeze(0), torch.clone(obsBoard[idx]).unsqueeze(0), torch.clone(obsPieces[idx]).unsqueeze(0), torch.clone(actions[idx]).unsqueeze(0), torch.clone(rewards[idx]).unsqueeze(0), torch.clone(dones[idx]).unsqueeze(0))
+            self.buffer[self.counter % self.replay_size] = data
+            self.counter += 1
 

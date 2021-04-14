@@ -1,4 +1,5 @@
 import torch
+from torch import tensor
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -27,23 +28,26 @@ class Net:
         intersects = torch.nonzero(env.intersected).flatten().long()
         field = env.field
         pieces = env.AInext_pieces
-        vals = self.network(field[intersects], pieces[intersects])
-        action = self.explorer.greedy(vals)
-        for i in range(len(intersects)):
-            inter = intersects[i]
-            self.fields[inter] = field[i]
-            self.pieces[inter] = pieces[i]
-            self.actions[inter] = action[i]
-        return action
+        if len(intersects) > 0:
+            vals = self.network(field[intersects], pieces[intersects])
+            action = self.explorer.greedy(vals)
+            for i in range(len(intersects)):
+                inter = intersects[i]
+                self.fields[inter] = field[i]
+                self.pieces[inter] = pieces[i]
+                self.actions[inter] = action[i]
+            return action
+        else:
+            return None
 
     def DoubleQlearn(self, pre_AIfield, pre_AIpieces, AIfield, AIpieces, pre_action, last_reward, dones, learn):
         if learn:
             vals = self.network(pre_AIfield, pre_AIpieces)
             vals_next = self.network(AIfield, AIpieces)
             vals_target_next = self.target_network(AIfield, AIpieces)
-            value_next = torch.gather(vals_target_next, 2, torch.argmax(vals_next, 2).unsqueeze(2))
-            td_target = (value_next.view(-1) * self.gamma * (1 - dones) + last_reward).view(-1)
-            td_guess = torch.gather(vals, 2, pre_action.long().view(-1, 1, 1)).view(-1)
+            value_next = torch.gather(vals_target_next, 1, torch.argmax(vals_next, 1).unsqueeze(1))
+            td_target = (value_next.view(-1) * self.gamma * (1 - dones) + last_reward)
+            td_guess = torch.gather(vals, 1, pre_action.unsqueeze(1)).squeeze(1)
             loss_value_network = self.criterion(td_guess, td_target)
             loss_value_network.backward()
             self.optimizer.step()
@@ -69,4 +73,12 @@ class Network(nn.Module):
         x = self.linear(x)
         return x
 
+
+class Random():
+    def take_action(self, env):
+        intersects = torch.nonzero(env.intersected).flatten().long()
+        if len(intersects) > 0:
+            return torch.ones(len(intersects), device=device).long()
+        else:
+            return None
 
