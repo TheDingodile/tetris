@@ -39,5 +39,4 @@ for counter in range(10**10):
     replay_buffer.save_data(Agent.fields, Agent.pieces, obsBoard, obsPieces, Agent.actions, rewards, dones, intersects)
     fields, pieces, fields2, pieces2, actions, rewards, dones = replay_buffer.sample_data()
     Agent.DoubleQlearn(fields, pieces, fields2, pieces2, actions, rewards, dones, learn)
-    print(env.score_list)
     showPrint = saveupdate(counter, Agent, showPrint, env)
