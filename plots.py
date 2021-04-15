@@ -2,15 +2,15 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 def returnplot(returns, x: int = 1000, y: int = 500, xlabel=None, ylabel="Return (per game)"):
-    runnings = [0] * len(returns)
-    for i in range(1, len(runnings) + 1):
-        if i < 500:
-            runnings[i - 1] = sum(returns[:i]) / i
-        else:
-            runnings[i - 1] = sum(returns[(i - 500):i]) / 500
+    # runnings = [0] * len(returns)
+    # for i in range(1, len(runnings) + 1):
+    #     if i < 500:
+    #         runnings[i - 1] = sum(returns[:i]) / i
+    #     else:
+    #         runnings[i - 1] = sum(returns[(i - 500):i]) / 500
     fig = plt.figure()
     move_figure(fig, x, y)
-    plt.plot(runnings)
+    plt.plot(returns)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.show(block=False)

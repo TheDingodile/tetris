@@ -54,10 +54,10 @@ class UI():
 
         font = pygame.font.SysFont('Calibri', 25, True, False)
         font1 = pygame.font.SysFont('Calibri', 65, True, False)
-        text = font.render("Score: " + str(game.score[0]), True, BLACK)
+        text = font.render("Score: " + str(game.score[0])[:-2], True, BLACK)
         text2 = font.render("Level: " + str(game.level), True, BLACK)
-        text3 = font.render("Tetris rate: " + Zero_dividor(400*game.all_tetrises,game.all_lines), True, BLACK)
-        text4 = font.render("Lines: " + str(game.all_lines), True, BLACK)
+        text3 = font.render("Tetris rate: " + Zero_dividor(400*game.all_tetrises[0],game.all_lines[0]), True, BLACK)
+        text4 = font.render("Lines: " + str(game.all_lines[0]), True, BLACK)
         text_game_over = font1.render("Game Over", True, (255, 125, 0))
         text_game_over1 = font1.render("Press ESC", True, (255, 215, 0))
 

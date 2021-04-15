@@ -7,9 +7,9 @@ from helpers import saveupdate
 import torch
 
 # Choose variables
-player1 = "human"
+player1 = "random"
 player2 = "random_sampler"
-batch = 1
+batch = 100
 replay_size = 100000
 sample_size = 64
 env = Tetris(player1, player2, batch)
@@ -43,4 +43,4 @@ for counter in range(10**10):
     #replay_buffer.save_data(Agent.fields, Agent.pieces, obsBoard, obsPieces, Agent.actions, rewards, dones, intersects)
     #fields, pieces, fields2, pieces2, actions, rewards, dones = replay_buffer.sample_data()
     #Agent.DoubleQlearn(Agent.fields, Agent.pieces, obsBoard, obsPieces, Agent.actions, rewards, dones, learn)
-    #showPrint = saveupdate(counter, Agent, showPrint, env)
+    showPrint = saveupdate(counter, Agent, showPrint, env)

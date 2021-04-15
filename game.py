@@ -8,8 +8,8 @@ from helpers import device
 
 class Tetris:
     def __init__(self, player1, player2, batch, Use_UI=True, fps=10, high_performance=0, level=3):
-        self.batch = batch
         self.start_level = level
+        self.batch = batch
         self.Use_UI = Use_UI
         self.high_performance = high_performance
         self.UI = UI()
@@ -25,11 +25,10 @@ class Tetris:
         self.height = 20
         self.width = 10
         self.score = [0 for _ in range(self.batch)]
-        self.mean_score_list = [0]
         self.done = False
         self.figure = [None for _ in range(self.batch)]
-        self.all_lines = 0
-        self.all_tetrises = 0
+        self.all_lines = [0 for _ in range(self.batch)]
+        self.all_tetrises = [0 for _ in range(self.batch)]
         self.pressing_down = False
         self.all_figures = [
         [[4, 5, 6, 7], [1, 5, 9, 13]],
@@ -49,7 +48,7 @@ class Tetris:
         (180, 34, 22),
         (180, 34, 122),
     ]
-        self.level = self.start_level
+        self.level = level
         self.visible_pieces = 1
 
         # use "random_sampler" or "seven_bag"
@@ -67,7 +66,10 @@ class Tetris:
                 self.draw_figure(j)
             self.draw_figure(j)
         self.score_list = []
+        self.done_list = []
         self.intersected = torch.ones(self.batch, device=device).long()
+        self.sumscore = 0
+        self.sumdones = 0
 
     def draw_figure(self, batch):
         if self.piece_sampler == "random_sampler":
@@ -113,13 +115,17 @@ class Tetris:
         for i in range(breaks.shape[0]):
             batch = breaks[i, 0]
             line = breaks[i, 2]
+
             rewards[batch] += 1
+            self.all_lines[batch] += 1
+
             roof = torch.cat((torch.zeros(1, self.field.shape[3], device=device), self.field[batch, 0, :line, :]), 0)
             self.field[batch, 0, :(line + 1), :] = roof
             self.max_field[batch] = [x - int(x >= (20 - line)) for x in self.max_field[batch]]
         rewards = rewards ** 2
         for i in range(self.batch):
             self.score[i] += rewards[i].item()
+            self.all_tetrises[i] += (rewards[i] == 16).item()
         return rewards
 
     def go_space(self, batch):
@@ -166,8 +172,13 @@ class Tetris:
         if self.intersects(batch):
             done = True
             print("gameover //", "score: " + str(self.score[batch]))
-            self.score_list.append(self.score)
+            self.sumscore += self.score[batch]
+            self.sumdones += 1
             self.restart(batch)
+            if self.sumdones == 10:
+                self.score_list.append(self.sumscore/self.sumdones)
+                self.sumscore = 0
+                self.sumdones = 0
         return done
 
     def go_side(self, dx, batch):
@@ -216,8 +227,8 @@ class Tetris:
     def restart(self, batch):
         self.figure[batch] = None
         self.score[batch] = 0
-        self.all_lines = 0
-        self.all_tetrises = 0
+        self.all_lines[batch] = 0
+        self.all_tetrises[batch] = 0
         self.level = self.start_level
         self.seven_bag_counter = 0
         self.next_pieces[batch] = []
