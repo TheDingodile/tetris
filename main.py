@@ -9,7 +9,7 @@ import torch
 # Choose variables
 player1 = "AI"
 player2 = "random_sampler"
-batch = 100
+batch = 256
 replay_size = 100000
 sample_size = 64
 env = Tetris(player1, player2, batch)
