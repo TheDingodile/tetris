@@ -1,11 +1,10 @@
 import torch
-from torch import tensor
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.optim import Adam
 from exploration import Exploration
 import pickle
 from helpers import device
+import pygame
 
 
 class Net:
@@ -81,4 +80,8 @@ class Random():
             return torch.ones(len(intersects), device=device).long()
         else:
             return None
+class Human():
+    def take_action(self, env):
+        return None
+
 

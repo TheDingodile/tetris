@@ -84,19 +84,19 @@ class UI():
                 game.high_performance = 1 - game.high_performance
             if event.type == pygame.KEYDOWN and game.player1 == "human":
                 if event.key == pygame.K_z:
-                    game.rotate_clock()
+                    game.rotate_clock(1, 0)
                 if event.key == pygame.K_x:
-                    game.rotate_counter_clock()
+                    game.rotate_clock(-1, 0)
                 if event.key == pygame.K_DOWN:
                     game.pressing_down = True
                 if event.key == pygame.K_LEFT:
-                    game.go_side(-1)
+                    game.go_side(-1, 0)
                 if event.key == pygame.K_RIGHT:
-                    game.go_side(1)
+                    game.go_side(1, 0)
                 if event.key == pygame.K_SPACE:
-                    game.go_space()
+                    game.go_space(0)
                 if event.key == pygame.K_ESCAPE:
-                    game.restart()
+                    game.restart(0)
 
             if event.type == pygame.KEYUP and game.player1 == "human":
                     if event.key == pygame.K_DOWN:

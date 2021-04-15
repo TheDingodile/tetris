@@ -102,18 +102,18 @@ class Tetris:
             width = j + self.figure[batch].x
             if height > self.height - 1 or width > self.width - 1 or width < 0 or self.field[batch, 0, height, width] != 0:
                 return True
-        return False
+        return False 
 
     def break_lines2(self, int_idx):
         summed_field = torch.sum(self.field[int_idx], dim=3)
-        summed_field[summed_field != 10] = 0
+        summed_field[summed_field <= 10] = 0
         breaks = torch.nonzero(summed_field)
         for i in range(breaks.shape[0]):
             batch = breaks[i, 0]
             line = breaks[i, 2]
-            roof = torch.cat((self.field[batch, 0, :(line - 1), :], torch.zeros(1, self.field.shape[3], device=device)), 0)
-            self.field[batch, 0, :line, :] = roof
-            self.max_field[i] = [x - 1 for x in self.max_field[i]]
+            roof = torch.cat((torch.zeros(1, self.field.shape[3], device=device), self.field[batch, 0, :line, :]), 0)
+            self.field[batch, 0, :(line + 1), :] = roof
+            self.max_field[batch] = [x - int(x >= (20 - line)) for x in self.max_field[batch]]
         return 1
 
 
@@ -217,7 +217,10 @@ class Tetris:
 
         self.intersected = torch.zeros(self.batch, device=device)
         for i in range(self.batch):
-            self.go_space(i)
+            if self.player1 == "human":
+                self.go_down(i)
+            else:
+                self.go_space(i)
 
         intersects_idx = torch.nonzero(self.intersected).flatten().long()
         rewards, dones = self.freeze(intersects_idx)
@@ -228,7 +231,7 @@ class Tetris:
                 self.UI.action(self)
             else:
                 self.UI.draw_step(self)
-                self.UI.clock.tick(self.fps)
+                self.UI.clock.tick(30)
         return self.field, self.AInext_pieces, self.intersected, rewards, dones
 
     def restart(self, batch):
