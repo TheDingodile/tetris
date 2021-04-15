@@ -10,7 +10,7 @@ class Exploration():
     @property
     def epsilon(self):
         K = 1
-        return max(0, 1 - self.counter / K)
+        return max(0, 0.2)
 
     @property
     def K(self):
@@ -33,7 +33,8 @@ class Exploration():
         self.counter += 1
         if self.counter % 10000 == 1:
             print(f"({str(float(vals.max()))[:4]}, {str(float(vals.std()))[:4]})", end=", ")
-        return int(choice(44, 1)) if random() < self.epsilon else vals.detach().cpu().numpy().argmax()
+        return torch.randint(0, 44, (vals.shape[0],)) if random() < self.epsilon else torch.argmax(vals, dim=1).long()
+
 
     def epsintosoftmax(self, vals):
         self.counter += 1

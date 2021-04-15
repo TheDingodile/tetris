@@ -9,7 +9,7 @@ def Zero_dividor(x, y):
 device = devicer('cuda' if cuda.is_available() else 'cpu')
 
 def saveupdate(counter, Agent, showPrint, env):
-    if counter % 10000 == 0:
+    if counter % 100 == 0:
         print("frame so far: " + str(counter))
         if Agent.__class__.__name__ == "Net":
             Agent.update_target_network()
