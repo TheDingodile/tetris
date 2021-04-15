@@ -7,7 +7,7 @@ import torch
 from helpers import device
 
 class Tetris:
-    def __init__(self, player1, player2, batch, Use_UI=True, fps=30, high_performance=0, level=3):
+    def __init__(self, player1, player2, batch, Use_UI=True, fps=10, high_performance=0, level=3):
         self.batch = batch
         self.start_level = level
         self.Use_UI = Use_UI
@@ -106,7 +106,7 @@ class Tetris:
 
     def break_lines2(self, int_idx):
         summed_field = torch.sum(self.field[int_idx], dim=3)
-        summed_field[summed_field <= 10] = 0
+        summed_field[summed_field < 10] = 0
         breaks = torch.nonzero(summed_field)
         for i in range(breaks.shape[0]):
             batch = breaks[i, 0]
@@ -231,7 +231,8 @@ class Tetris:
                 self.UI.action(self)
             else:
                 self.UI.draw_step(self)
-                self.UI.clock.tick(30)
+                if self.player1 == "human":
+                    self.UI.clock.tick(self.fps)
         return self.field, self.AInext_pieces, self.intersected, rewards, dones
 
     def restart(self, batch):

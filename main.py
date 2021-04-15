@@ -9,9 +9,9 @@ import torch
 # Choose variables
 player1 = "human"
 player2 = "random_sampler"
-batch = 128
+batch = 1
 replay_size = 100000
-sample_size = 256
+sample_size = 64
 env = Tetris(player1, player2, batch)
 learn = True
 replay_buffer = replay_buffer(replay_size, sample_size, learn)
