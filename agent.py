@@ -77,7 +77,7 @@ class Random():
     def take_action(self, env):
         intersects = torch.nonzero(env.intersected).flatten().long()
         if len(intersects) > 0:
-            return torch.ones(len(intersects), device=device).long()
+            return torch.randint(0, 44, (len(intersects),))
         else:
             return None
 class Human():

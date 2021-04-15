@@ -7,7 +7,7 @@ from helpers import saveupdate
 import torch
 
 # Choose variables
-player1 = "random"
+player1 = "AI"
 player2 = "random_sampler"
 batch = 100
 replay_size = 100000

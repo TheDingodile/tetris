@@ -110,7 +110,7 @@ class Tetris:
     def break_lines(self, int_idx):
         rewards = torch.zeros(self.batch, device=device)
         summed_field = torch.sum(self.field[int_idx], dim=3)
-        summed_field[summed_field < 10] = 0
+        summed_field[summed_field < 4] = 0
         breaks = torch.nonzero(summed_field)
         for i in range(breaks.shape[0]):
             batch = breaks[i, 0]
@@ -175,7 +175,7 @@ class Tetris:
             self.sumscore += self.score[batch]
             self.sumdones += 1
             self.restart(batch)
-            if self.sumdones == 10:
+            if self.sumdones == 1000:
                 self.score_list.append(self.sumscore/self.sumdones)
                 self.sumscore = 0
                 self.sumdones = 0
