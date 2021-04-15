@@ -24,10 +24,10 @@ class Tetris:
         self.zoom = 20
         self.height = 20
         self.width = 10
-        self.score = 0
+        self.score = [0 for _ in range(self.batch)]
         self.mean_score_list = [0]
         self.done = False
-        self.figure = [None for _ in range(batch)]
+        self.figure = [None for _ in range(self.batch)]
         self.all_lines = 0
         self.all_tetrises = 0
         self.pressing_down = False
@@ -79,7 +79,8 @@ class Tetris:
         onehot = torch.zeros(7, device=device)
         onehot[piece] = 1
         for i in range(self.visible_pieces):
-            self.AInext_pieces[batch, i] = self.AInext_pieces[batch, i + 1]
+            self.AInext_pieces[batch, i*7:(i+1)*7] = self.AInext_pieces[batch, (i+1)*7:(i+2)*7]
+        self.AInext_pieces[batch, self.visible_pieces*7:(self.visible_pieces + 1)*7] = onehot
         self.figure[batch] = self.next_pieces[batch][0]
         self.next_pieces[batch] = self.next_pieces[batch][1:]
 
@@ -104,41 +105,22 @@ class Tetris:
                 return True
         return False 
 
-    def break_lines2(self, int_idx):
+    def break_lines(self, int_idx):
+        rewards = torch.zeros(self.batch, device=device)
         summed_field = torch.sum(self.field[int_idx], dim=3)
         summed_field[summed_field < 10] = 0
         breaks = torch.nonzero(summed_field)
         for i in range(breaks.shape[0]):
             batch = breaks[i, 0]
             line = breaks[i, 2]
+            rewards[batch] += 1
             roof = torch.cat((torch.zeros(1, self.field.shape[3], device=device), self.field[batch, 0, :line, :]), 0)
             self.field[batch, 0, :(line + 1), :] = roof
             self.max_field[batch] = [x - int(x >= (20 - line)) for x in self.max_field[batch]]
-        return 1
-
-
-    def break_lines(self, batch):
-        maxer = [0] * 10
-        lines = 0
-        for i in range(1, self.height):
-            zeros = 0
-            for j in range(self.width):
-                if self.field[batch, 0, i, j] == 0:
-                    zeros += 1
-                elif maxer[j] == 0:
-                    maxer[j] = self.height - i
-            if zeros == 0:
-                lines += 1
-                for i1 in range(i, 1, -1):
-                    for j in range(self.width):
-                        self.field[batch, 0, i1, j] = self.field[batch, 0, i1 - 1, j]
-        self.all_lines += lines
-        if lines == 4:
-            self.all_tetrises += 1
-        reward = lines ** 2
-        self.score += lines ** 2
-        self.level_up()
-        return reward
+        rewards = rewards ** 2
+        for i in range(self.batch):
+            self.score[i] += rewards[i].item()
+        return rewards
 
     def go_space(self, batch):
         min_delta = self.height
@@ -164,7 +146,6 @@ class Tetris:
             self.intersected[batch] = 1
 
     def freeze(self, int_idx):
-        rewards = torch.zeros(self.batch, device=device)
         dones = torch.zeros(self.batch, device=device)
         for k in int_idx:
             for item in self.figure[k].image():
@@ -177,19 +158,16 @@ class Tetris:
                     self.max_field[k][width] = self.height - height
             self.draw_figure(k)
             dones[k] = self.game_over(k)
-        return rewards, dones
+
+        return dones
 
     def game_over(self, batch):
         done = False
         if self.intersects(batch):
             done = True
-            self.restart(batch)
-            print("gameover //", "score: " + str(self.score) + " //", "lines: " + str(self.all_lines))
+            print("gameover //", "score: " + str(self.score[batch]))
             self.score_list.append(self.score)
-            if len(self.mean_score_list) == 1 and len(self.score_list) > 1000:
-                self.mean_score_list.append(sum(self.score_list)/1000)
-            if len(self.score_list) > 1000:
-                    self.mean_score_list.append((self.mean_score_list[-1]+(self.score_list[-1] - self.score_list[-1000])/1000)) 
+            self.restart(batch)
         return done
 
     def go_side(self, dx, batch):
@@ -223,8 +201,8 @@ class Tetris:
                 self.go_space(i)
 
         intersects_idx = torch.nonzero(self.intersected).flatten().long()
-        rewards, dones = self.freeze(intersects_idx)
-        self.break_lines2(intersects_idx)
+        dones = self.freeze(intersects_idx)
+        rewards = self.break_lines(intersects_idx)
 
         if self.Use_UI is True:
             if self.high_performance == 1:
@@ -237,7 +215,7 @@ class Tetris:
 
     def restart(self, batch):
         self.figure[batch] = None
-        self.score = 0
+        self.score[batch] = 0
         self.all_lines = 0
         self.all_tetrises = 0
         self.level = self.start_level

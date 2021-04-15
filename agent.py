@@ -68,7 +68,7 @@ class Network(nn.Module):
         padder = torch.ones(field.shape[0], 1, field.shape[2], 2, device=device)
         field_pad = torch.cat((padder, torch.cat((field, padder), 3)), 3)
         x = self.conv(field_pad)
-        x = torch.cat((x, pieces), 1)
+        x = torch.cat((x, torch.flatten(pieces, start_dim=1)), 1)
         x = self.linear(x)
         return x
 

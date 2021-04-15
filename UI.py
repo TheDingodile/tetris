@@ -54,7 +54,7 @@ class UI():
 
         font = pygame.font.SysFont('Calibri', 25, True, False)
         font1 = pygame.font.SysFont('Calibri', 65, True, False)
-        text = font.render("Score: " + str(game.score), True, BLACK)
+        text = font.render("Score: " + str(game.score[0]), True, BLACK)
         text2 = font.render("Level: " + str(game.level), True, BLACK)
         text3 = font.render("Tetris rate: " + Zero_dividor(400*game.all_tetrises,game.all_lines), True, BLACK)
         text4 = font.render("Lines: " + str(game.all_lines), True, BLACK)
