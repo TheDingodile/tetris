@@ -173,9 +173,9 @@ class Tetris:
             done = True
             self.sumscore += self.score[batch]
             self.sumdones += 1
-            print("gameover //", "score: " + str(self.score[batch]), "// games played: " + str(self.sumdones + 1000 * len(self.score_list)))
+            print("gameover //", "score: " + str(self.score[batch]), "// games played: " + str(self.sumdones + 100 * len(self.score_list)))
             self.restart(batch)
-            if self.sumdones == 1000:
+            if self.sumdones == 100:
                 self.score_list.append(self.sumscore/self.sumdones)
                 self.sumscore = 0
                 self.sumdones = 0
