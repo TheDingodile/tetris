@@ -25,6 +25,7 @@ class Tetris:
         self.height = 20
         self.width = 10
         self.score = [0 for _ in range(self.batch)]
+        self.rewards = [0 for _ in range(self.batch)]
         self.done = False
         self.figure = [None for _ in range(self.batch)]
         self.all_lines = [0 for _ in range(self.batch)]
@@ -66,10 +67,12 @@ class Tetris:
                 self.draw_figure(j)
             self.draw_figure(j)
         self.score_list = []
+        self.reward_list = []
         self.done_list = []
         self.intersected = torch.ones(self.batch, device=device).long()
         self.sumscore = 0
         self.sumdones = 0
+        self.sumrewards = 0
 
     def draw_figure(self, batch):
         if self.piece_sampler == "random_sampler":
@@ -168,7 +171,7 @@ class Tetris:
                     self.max_field[k][width] = self.height - height
             var_after = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
             holes_after = torch.sum(torch.tensor(self.max_field[k], device=device) - torch.sum(self.field[k], dim=1), dim=1)
-            fakerewards[k] += (var_before - var_after) * 0.05 + (holes_before - holes_after).item() * 0.1
+            fakerewards[k] += (var_before - var_after) * 0.02 + (holes_before - holes_after).item() * 0.05 + 0.2
 
             self.draw_figure(k)
             dones[k] = self.game_over(k)
@@ -179,13 +182,16 @@ class Tetris:
         if self.intersects(batch):
             done = True
             self.sumscore += self.score[batch]
+            self.sumrewards += self.rewards[batch]
             self.sumdones += 1
             print("gameover //", "score: " + str(self.score[batch]), "// games played: " + str(self.sumdones + 100 * len(self.score_list)))
             self.restart(batch)
             if self.sumdones == 100:
                 self.score_list.append(self.sumscore/self.sumdones)
+                self.reward_list.append(self.sumrewards/self.sumdones)
                 self.sumscore = 0
                 self.sumdones = 0
+                self.sumrewards = 0
         return done
 
     def go_side(self, dx, batch):
@@ -222,6 +228,9 @@ class Tetris:
         fakerewards, dones = self.freeze(intersects_idx)
         rewards = self.break_lines(intersects_idx)
 
+        for i in range(self.batch):
+            self.rewards[i] += rewards[i] + fakerewards[i]
+
         if self.Use_UI is True:
             if self.high_performance == 1:
                 self.UI.action(self)
@@ -241,6 +250,7 @@ class Tetris:
         self.next_pieces[batch] = []
         self.AInext_pieces[batch] = torch.zeros(7 * (1 + self.visible_pieces), device=device).long()
         self.field[batch] = torch.zeros(1, self.height, self.width, device=device).long()
+        self.rewards[batch] = 0
 
         for _ in range(self.visible_pieces):
             self.draw_figure(batch)

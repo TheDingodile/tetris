@@ -16,5 +16,6 @@ def saveupdate(counter, Agent, showPrint, env):
             saveAgent(Agent, "yo")
     if showPrint:
         plt.close('all')
-        returnplot(env.score_list, x=1200, y=200)
+        returnplot(env.score_list, x=1200, y=200, xlabel="games played in 100's", ylabel="Score (per game)")
+        returnplot(env.reward_list, x=600, y=200, xlabel="games played in 100's", ylabel="Return (per game)")
         return False

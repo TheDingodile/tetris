@@ -31,7 +31,7 @@ class Exploration():
         self.counter += 1
         return torch.randint(0, 44, (vals.shape[0],)) if random() < self.epsilon else torch.argmax(vals, dim=1).long()
 
-    def top_n_moves(self, vals, n=4):
+    def top_n_moves(self, vals, n=3):
         self.counter += 1
         for _ in range(n-1):
             if random() < 0.2:
