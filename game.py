@@ -111,7 +111,7 @@ class Tetris:
     def break_lines(self, int_idx):
         rewards = torch.zeros(self.batch, device=device)
         summed_field = torch.sum(self.field[int_idx], dim=3)
-        summed_field[summed_field < 8] = 0
+        summed_field[summed_field < 10] = 0
         breaks = torch.nonzero(summed_field)
         for i in range(breaks.shape[0]):
             batch = breaks[i, 0]
@@ -154,7 +154,9 @@ class Tetris:
 
     def freeze(self, int_idx):
         dones = torch.zeros(self.batch, device=device)
+        fakerewards = torch.zeros(self.batch, device=device)
         for k in int_idx:
+            var_before = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
             for item in self.figure[k].image():
                 i = item // 4
                 j = item - i * 4 
@@ -163,10 +165,20 @@ class Tetris:
                 self.field[k, 0, height, width] = 1
                 if self.height - height > self.max_field[k][width]:
                     self.max_field[k][width] = self.height - height
+            var_after = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
+            fakerewards[k] += (var_before - var_after) * 0.05
+            for item in self.figure[k].image():
+                i = item // 4
+                j = item - i * 4 
+                height = i + self.figure[k].y
+                width = j + self.figure[k].x
+                if height < 19:
+                    fakerewards[k] += self.field[k, 0, height + 1, width] * 0.1
+
+
             self.draw_figure(k)
             dones[k] = self.game_over(k)
-
-        return dones
+        return fakerewards, dones
 
     def game_over(self, batch):
         done = False
@@ -213,7 +225,7 @@ class Tetris:
                 self.go_space(i)
 
         intersects_idx = torch.nonzero(self.intersected).flatten().long()
-        dones = self.freeze(intersects_idx)
+        fakerewards, dones = self.freeze(intersects_idx)
         rewards = self.break_lines(intersects_idx)
 
         if self.Use_UI is True:
@@ -223,7 +235,7 @@ class Tetris:
                 self.UI.draw_step(self)
                 if self.player1 == "human":
                     self.UI.clock.tick(self.fps)
-        return self.field, self.AInext_pieces, self.intersected, rewards, dones
+        return self.field, self.AInext_pieces, self.intersected, rewards + fakerewards, dones
 
     def restart(self, batch):
         self.figure[batch] = None

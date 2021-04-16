@@ -15,9 +15,9 @@ class Net:
         self.network = Network().to(device)
         self.target_network = Network().to(device)
         self.placeholder_network = Network().to(device)
-        self.gamma = 0.99
+        self.gamma = 0.98
         self.criterion = nn.MSELoss()
-        self.optimizer = Adam(self.network.parameters(), lr=1e-4, weight_decay=1e-5)
+        self.optimizer = Adam(self.network.parameters(), lr=1e-5, weight_decay=1e-5)
         self.explorer = Exploration()
         self.fields = torch.zeros(self.batch, 1, self.height, self.width, device=device).long()
         self.pieces = torch.zeros(self.batch, 14, device=device).long()
@@ -45,8 +45,8 @@ class Net:
             vals_next = self.network(AIfield, AIpieces)
             vals_target_next = self.target_network(AIfield, AIpieces)
             value_next = torch.gather(vals_target_next, 1, torch.argmax(vals_next, 1).unsqueeze(1))
-            td_target = (value_next.view(-1) * self.gamma * (1 - dones) + last_reward)
-            td_guess = torch.gather(vals, 1, pre_action.unsqueeze(1)).squeeze(1)
+            td_target = (value_next.view(-1) * self.gamma * (1 - dones) + last_reward).unsqueeze(1)
+            td_guess = torch.gather(vals, 1, pre_action.unsqueeze(1))
             loss_value_network = self.criterion(td_guess, td_target)
             loss_value_network.backward()
             self.optimizer.step()
@@ -59,9 +59,9 @@ class Net:
 class Network(nn.Module):
     def __init__(self, vis_pieces=1):
         super(Network, self).__init__()
-        self.size_after_con = 3520
-        self.conv = nn.Sequential(nn.Conv2d(1, 128, 5), nn.LeakyReLU(), nn.Conv2d(128, 32, 1), nn.LeakyReLU(), nn.Flatten())
-        self.linear = nn.Sequential(nn.Linear(self.size_after_con + 7 * (1 + vis_pieces), 40), nn.LeakyReLU(), nn.Linear(40, 100), nn.LeakyReLU(), nn.Linear(100, 44))
+        self.size_after_con = 1760
+        self.conv = nn.Sequential(nn.Conv2d(1, 64, 5), nn.LeakyReLU(), nn.Conv2d(64, 16, 1), nn.LeakyReLU(), nn.Flatten())
+        self.linear = nn.Sequential(nn.Linear(self.size_after_con + 7 * (1 + vis_pieces), 50), nn.LeakyReLU(), nn.Linear(50, 50), nn.LeakyReLU(), nn.Linear(50, 44))
 
     def forward(self, field, pieces):
         field = field[:,:,5:,:]
