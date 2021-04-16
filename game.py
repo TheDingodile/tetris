@@ -157,6 +157,7 @@ class Tetris:
         fakerewards = torch.zeros(self.batch, device=device)
         for k in int_idx:
             var_before = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
+            holes_before = torch.sum(torch.tensor(self.max_field[k], device=device) - torch.sum(self.field[k], dim=1), dim=1)
             for item in self.figure[k].image():
                 i = item // 4
                 j = item - i * 4 
@@ -166,15 +167,8 @@ class Tetris:
                 if self.height - height > self.max_field[k][width]:
                     self.max_field[k][width] = self.height - height
             var_after = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
-            fakerewards[k] += (var_before - var_after) * 0.05
-            for item in self.figure[k].image():
-                i = item // 4
-                j = item - i * 4 
-                height = i + self.figure[k].y
-                width = j + self.figure[k].x
-                if height < 19:
-                    fakerewards[k] += self.field[k, 0, height + 1, width] * 0.1
-
+            holes_after = torch.sum(torch.tensor(self.max_field[k], device=device) - torch.sum(self.field[k], dim=1), dim=1)
+            fakerewards[k] += (var_before - var_after) * 0.05 + (holes_before - holes_after).item() * 0.1
 
             self.draw_figure(k)
             dones[k] = self.game_over(k)
