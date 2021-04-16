@@ -11,7 +11,7 @@ player1 = "AI"
 player2 = "random_sampler"
 batch = 256
 replay_size = 100000
-sample_size = 64
+sample_size = 256
 env = Tetris(player1, player2, batch)
 learn = True
 replay_buffer = replay_buffer(replay_size, sample_size, learn)
@@ -40,7 +40,8 @@ keyboard.Listener(on_press=on_press).start()
 for counter in range(10**10):
     actions = Agent.take_action(env)
     obsBoard, obsPieces, intersects, rewards, dones = env.step(actions, intersects)
-    #replay_buffer.save_data(Agent.fields, Agent.pieces, obsBoard, obsPieces, Agent.actions, rewards, dones, intersects)
-    #fields, pieces, fields2, pieces2, actions, rewards, dones = replay_buffer.sample_data()
-    Agent.DoubleQlearn(Agent.fields, Agent.pieces, obsBoard, obsPieces, Agent.actions, rewards, dones, learn)
+    replay_buffer.save_data(Agent.fields, Agent.pieces, obsBoard, obsPieces, Agent.actions, rewards, dones, intersects)
+    for _ in range(10):
+        fields, pieces, fields2, pieces2, actions, rewards, dones = replay_buffer.sample_data()
+        Agent.DoubleQlearn(fields, pieces, fields2, pieces2, actions, rewards, dones, learn)
     showPrint = saveupdate(counter, Agent, showPrint, env)

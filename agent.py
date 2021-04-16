@@ -29,7 +29,7 @@ class Net:
         pieces = env.AInext_pieces
         if len(intersects) > 0:
             vals = self.network(field[intersects], pieces[intersects])
-            action = self.explorer.epsilonGreedy(vals)
+            action = self.explorer.top_n_moves(vals)
             for i in range(len(intersects)):
                 inter = intersects[i]
                 self.fields[inter] = field[i]

@@ -7,7 +7,7 @@ import torch
 from helpers import device
 
 class Tetris:
-    def __init__(self, player1, player2, batch, Use_UI=True, fps=10, high_performance=0, level=3):
+    def __init__(self, player1, player2, batch, Use_UI=True, fps=5, high_performance=0, level=3):
         self.start_level = level
         self.batch = batch
         self.Use_UI = Use_UI
@@ -84,7 +84,8 @@ class Tetris:
             self.AInext_pieces[batch, i*7:(i+1)*7] = self.AInext_pieces[batch, (i+1)*7:(i+2)*7]
         self.AInext_pieces[batch, self.visible_pieces*7:(self.visible_pieces + 1)*7] = onehot
         self.figure[batch] = self.next_pieces[batch][0]
-        self.next_pieces[batch] = self.next_pieces[batch][1:]
+        if len(self.next_pieces[batch]) > self.visible_pieces:
+            self.next_pieces[batch] = self.next_pieces[batch][1:]
 
     def randomsample(self):
         return random.randint(0, len(self.all_figures) - 1)
