@@ -75,11 +75,22 @@ class Network(nn.Module):
 
 class Random():
     def take_action(self, env):
+        self.search(env)
         intersects = torch.nonzero(env.intersected).flatten().long()
         if len(intersects) > 0:
             return torch.randint(0, 44, (len(intersects),))
         else:
             return None
+
+    def search(self, env):
+        print(env.next_pieces)
+        print(env.figure)
+        values = []
+        for i in range(44):
+            values.append(env.simulate(env.field[0], env.max_field[0], env.next_pieces[0], i))
+        print(values)
+
+            
 class Human():
     def take_action(self, env):
         return None

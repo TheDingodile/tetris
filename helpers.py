@@ -6,7 +6,7 @@ from plots import returnplot
 def Zero_dividor(x, y):
     return "100 %" if y == 0 else str(int(x / y)) + " %"
 
-device = devicer('cuda' if cuda.is_available() else 'cpu')
+device = devicer('cpu')
 
 def saveupdate(counter, Agent, showPrint, env):
     if counter % 100 == 0:

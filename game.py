@@ -5,6 +5,7 @@ import numpy as np
 from UI import UI
 import torch
 from helpers import device
+from copy import copy
 
 class Tetris:
     def __init__(self, player1, player2, batch, Use_UI=True, fps=5, high_performance=0, level=3):
@@ -120,17 +121,17 @@ class Tetris:
             batch = breaks[i, 0]
             line = breaks[i, 2]
 
-            rewards[batch] += 1
-            self.all_lines[batch] += 1
+            #rewards[batch] += 1
+            #self.all_lines[batch] += 1
 
             roof = torch.cat((torch.zeros(1, self.field.shape[3], device=device), self.field[batch, 0, :line, :]), 0)
             self.field[batch, 0, :(line + 1), :] = roof
             self.max_field[batch] = [x - int(x >= (20 - line)) for x in self.max_field[batch]]
-        rewards = rewards ** 2
-        for i in range(self.batch):
-            self.score[i] += rewards[i].item()
-            self.all_tetrises[i] += (rewards[i] == 16).item()
-        return rewards
+        #rewards = rewards ** 2
+        #for i in range(self.batch):
+        #    self.score[i] += rewards[i].item()
+        #    self.all_tetrises[i] += (rewards[i] == 16).item()
+        return# rewards
 
     def go_space(self, batch):
         min_delta = self.height
@@ -157,10 +158,10 @@ class Tetris:
 
     def freeze(self, int_idx):
         dones = torch.zeros(self.batch, device=device)
-        fakerewards = torch.zeros(self.batch, device=device)
+        #fakerewards = torch.zeros(self.batch, device=device)
         for k in int_idx:
-            var_before = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
-            holes_before = torch.sum(torch.tensor(self.max_field[k], device=device) - torch.sum(self.field[k], dim=1), dim=1)
+            #var_before = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
+            #holes_before = torch.sum(torch.tensor(self.max_field[k], device=device) - torch.sum(self.field[k], dim=1), dim=1)
             for item in self.figure[k].image():
                 i = item // 4
                 j = item - i * 4 
@@ -169,13 +170,13 @@ class Tetris:
                 self.field[k, 0, height, width] = 1
                 if self.height - height > self.max_field[k][width]:
                     self.max_field[k][width] = self.height - height
-            var_after = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
-            holes_after = torch.sum(torch.tensor(self.max_field[k], device=device) - torch.sum(self.field[k], dim=1), dim=1)
-            fakerewards[k] += (var_before - var_after) * 0.02 + (holes_before - holes_after).item() * 0.05 + 0.2
+            #var_after = sum([abs(x[0] - x[1]) for x in zip(self.max_field[k][1:], self.max_field[k][:self.width - 1])])
+            #holes_after = torch.sum(torch.tensor(self.max_field[k], device=device) - torch.sum(self.field[k], dim=1), dim=1)
+            #fakerewards[k] += (var_before - var_after) * 0.02 + (holes_before - holes_after).item() * 0.05 + 0.2
 
             self.draw_figure(k)
             dones[k] = self.game_over(k)
-        return fakerewards, dones
+        return #fakerewards, dones
 
     def game_over(self, batch):
         done = False
@@ -225,11 +226,13 @@ class Tetris:
                 self.go_space(i)
 
         intersects_idx = torch.nonzero(self.intersected).flatten().long()
-        fakerewards, dones = self.freeze(intersects_idx)
-        rewards = self.break_lines(intersects_idx)
+        self.freeze(intersects_idx)
+        #fakerewards, dones = self.freeze(intersects_idx)
+        #rewards = self.break_lines(intersects_idx)
+        self.break_lines(intersects_idx)
 
-        for i in range(self.batch):
-            self.rewards[i] += rewards[i] + fakerewards[i]
+        #for i in range(self.batch):
+        #    self.rewards[i] += rewards[i] + fakerewards[i]
 
         if self.Use_UI is True:
             if self.high_performance == 1:
@@ -238,7 +241,7 @@ class Tetris:
                 self.UI.draw_step(self)
                 if self.player1 == "human":
                     self.UI.clock.tick(self.fps)
-        return self.field, self.AInext_pieces, self.intersected, rewards + fakerewards, dones
+        return self.field, self.AInext_pieces, self.intersected#, rewards + fakerewards, dones
 
     def restart(self, batch):
         self.figure[batch] = None
@@ -252,7 +255,54 @@ class Tetris:
         self.field[batch] = torch.zeros(1, self.height, self.width, device=device).long()
         self.rewards[batch] = 0
 
-        for _ in range(self.visible_pieces):
-            self.draw_figure(batch)
-        self.draw_figure(batch)
-        self.max_field[batch] = [0 for _ in range(self.width)]
+    def simulate(self, board, maxfields, figures, act):
+        board = torch.clone(board)
+        maxfields = copy(maxfields)
+        figures = copy(figures)
+
+        rotate = act//11
+        self.sim_rotate_clock(figures[0], rotate, board)
+        self.sim_go_side(figures[0], (act - 11 * rotate) - 5, board)
+        self.sim_go_space(figures[0], maxfields)
+
+        return self.h(board, maxfields)
+
+    def h(self, board, maxfields):
+        var_before = sum([abs(x[0] - x[1]) for x in zip(maxfields[1:], maxfields[:self.width - 1])])
+        holes_before = torch.sum(torch.tensor(maxfields, device=device) - torch.sum(board, dim=1), dim=1)
+        return var_before + holes_before
+
+    def sim_rotate_clock(self, figure, amount, board):
+        old_rotation = figure.rotation
+        figure.rotate_clock(amount)
+        if self.sim_intersects(figure, board):
+            figure.rotation = old_rotation
+
+    def sim_go_side(self, figure, dx, board):
+        old_x = figure.x
+        figure.x += dx
+        if self.sim_intersects(figure, board):
+            figure.x = old_x
+
+    def sim_go_space(self, figure, maxfields):
+        min_delta = self.height
+        for item in figure.image():
+            i = item // 4
+            j = item - i * 4
+            height = i + figure.y
+            width = j + figure.x
+            delta = (self.height - height) - maxfields[width]
+            if delta < min_delta:
+                min_delta = delta
+        figure.y += min_delta
+        figure.y -= 1
+
+    def sim_intersects(self, figure, board):
+        for item in figure.image():
+            i = item // 4
+            j = item - i * 4
+            height = i + figure.y
+            width = j + figure.x
+            if height > height - 1 or width > self.width - 1 or width < 0 or board[0, height, width] != 0:
+                return True
+        return False 
